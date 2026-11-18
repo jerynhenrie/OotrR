@@ -446,10 +446,20 @@ def main(argv=None):
     parser.add_argument('--slot')
     parser.add_argument('--save', help='progress.sav to follow (default: the most recently written)')
     parser.add_argument('--hookshot', help='Hookshot folder (default: the mod folder\'s parent of mods/)')
+    parser.add_argument('--launch', action='store_true',
+                        help='start the game (Linux Hookshot) so its memory can be read: docs/LINUX.md')
     args = parser.parse_args(argv)
     manifest, _ = read_artifact(args.mod)
     hookshot = args.hookshot or (args.mod.resolve().parent.parent if args.mod.resolve().parent.name.lower() == 'mods'
                                  else None)
+    if args.launch:
+        from oot_rando.tracker.game_launch import launch
+        if not hookshot:
+            parser.error('--launch needs --hookshot, or a mod folder in <game>/mods')
+        try:
+            launch(hookshot)
+        except (ValueError, OSError) as error:
+            parser.error(f'--launch: {error}')
     live = None
     if live_supported():
         from oot_rando.tracker.live_memory import LiveGameData

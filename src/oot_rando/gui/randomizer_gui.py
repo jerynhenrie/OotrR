@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import queue
 import secrets
+import sys
 import threading
 import webbrowser
 import tkinter as tk
@@ -909,6 +910,9 @@ class Application:
             ttk.Entry(field, textvariable=variable, width=width, **extra).pack(fill='x', pady=(5, 0))
         self.ap_button = ttk.Button(row, text='Connect', style='Accent.TButton', command=self.toggle_archipelago)
         self.ap_button.pack(side='left', anchor='s')
+        if sys.platform.startswith('linux'):   # the client reads only a game it started (docs/LINUX.md)
+            self.launch_button = ttk.Button(row, text='Launch game', command=self.launch_game)
+            self.launch_button.pack(side='left', anchor='s', padx=(8, 0))
         ttk.Label(body, textvariable=self.ap_status, style='Small.TLabel', wraplength=640).pack(anchor='w', pady=(10, 8))
         self.ap_log = tk.Text(body, height=8, wrap='word', state='disabled', padx=12, pady=10)
         self.ap_log.pack(fill='x')
@@ -918,6 +922,18 @@ class Application:
         chat.bind('<Return>', lambda event: self.send_archipelago_chat())
         ttk.Button(row, text='Send', command=self.send_archipelago_chat).pack(side='left', padx=(8, 0))
         self.update_archipelago_controls()
+
+    def launch_game(self):
+        """Start Linux Hookshot from here, so the tracker and the client can read it (docs/LINUX.md)."""
+        from oot_rando.tracker.game_launch import launch
+        folder = self.hookshot_root()
+        if folder is None:
+            messagebox.showerror('Launch game', 'Choose the mods folder of your Hookshot game (<game>/mods) first.')
+            return
+        try:
+            self.game_process = launch(folder)
+        except (ValueError, OSError) as error:
+            messagebox.showerror('Launch game', str(error))
 
     def update_archipelago_controls(self):
         self.ap_button.state(['!disabled'] if self.ap_manifest or self.ap_client else ['disabled'])

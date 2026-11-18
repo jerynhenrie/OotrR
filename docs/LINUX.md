@@ -53,5 +53,9 @@ Hookshot v2.3.2, Arch Linux (Omarchy), kernel 7.2, `ptrace_scope` 1, 2026-11-17:
   the game (Linux ptrace_scope): start it with ap-client --launch (or Launch game),
   see docs/LINUX.md`. With both running, the client skips the one it cannot read
   and attaches to the one it started.
-- Still to check in a multiworld: a check sent before saving, and an item
-  received from the server (`/send`).
+- Multiworld (Archipelago 0.6.7, local server, OoT Remake + ChecksFinder):
+  the Kokiri Sword chest reached the server 4 seconds before the game wrote its
+  save (live reading); after `/release` of the other world, Link held up each of
+  its 11 items in turn (reception through `/proc/<pid>/mem`).
+- Server `/send` items are never handed over (they have no mailbox record), on
+  any system: test reception with items found in another world.

@@ -76,6 +76,47 @@ class Units(unittest.TestCase):
         old = sample_patch(placements={'A#1': {'item': 'Bow', 'own': True}})
         self.assertIsNone(bridge.patch_spheres(old))
 
+    def test_patch_file_is_a_website_player_container(self):
+        # archipelago.gg offers 'Download Patch File' for a zip whose archipelago.json names the slot's game and
+        # player (worlds.Files.is_ap_player_container), and needs patch_file_ending for an unknown game.
+        import json, tempfile, zipfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / ('AP_1_P2_Moi' + bridge.PATCH_SUFFIX)
+            bridge.write_patch(sample_patch(player=2), path)
+            with zipfile.ZipFile(path) as archive:
+                manifest = json.loads(archive.read('archipelago.json'))
+            self.assertEqual((manifest['game'], manifest['player'], manifest['patch_file_ending']),
+                             (bridge.GAME, 2, bridge.PATCH_SUFFIX))
+            self.assertEqual(bridge.load_patch(path), bridge.check_patch(sample_patch(player=2)))
+
+    def test_plain_json_patch_still_loads(self):
+        import json, tempfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / ('old' + bridge.PATCH_SUFFIX)
+            path.write_text(json.dumps(sample_patch()), encoding='utf-8')
+            self.assertEqual(bridge.load_patch(path), bridge.check_patch(sample_patch()))
+            self.assertIsNone(bridge.patch_server(path))
+
+    def test_server_written_by_the_website_is_read(self):
+        # The website rewrites archipelago.json with the room's address on download.
+        import json, tempfile, zipfile
+        from pathlib import Path
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / ('P1_Moi_abc' + bridge.PATCH_SUFFIX)
+            bridge.write_patch(sample_patch(), path)
+            self.assertIsNone(bridge.patch_server(path))
+            with zipfile.ZipFile(path) as archive:
+                files = {name: archive.read(name) for name in archive.namelist()}
+            manifest = json.loads(files['archipelago.json'])
+            manifest['server'] = 'archipelago.gg:38281'
+            files['archipelago.json'] = json.dumps(manifest)
+            with zipfile.ZipFile(path, 'w') as archive:
+                for name, data in files.items():
+                    archive.writestr(name, data)
+            self.assertEqual(bridge.patch_server(path), 'archipelago.gg:38281')
+
     def test_patch_refused(self):
         for broken in (sample_patch(format='other'), sample_patch(version=99),
                        sample_patch(placements={'A#1': {'item': 'Bow'}})):

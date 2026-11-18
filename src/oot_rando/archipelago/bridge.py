@@ -290,14 +290,52 @@ class PlayerWorld:
 
 
 # ------------------------------------------------------------------ patch, application side
-def load_patch(path):
+PATCH_ENTRY = 'patch.json'   # the patch inside a .aprmk container
+
+
+def write_patch(patch, path):
+    """Write ``patch`` as a .aprmk container: a zip holding the patch and an ``archipelago.json`` naming
+    the game and player. Archipelago's website offers it for download from a room (it recognises a slot's
+    file by that manifest, and takes the file ending from it for a game it does not know) and writes the
+    room's address into it (``patch_server``)."""
+    import zipfile
+    manifest = {'game': GAME, 'player': patch.get('player') or 1, 'patch_file_ending': PATCH_SUFFIX,
+                'server': None, 'version': PATCH_VERSION}
+    with zipfile.ZipFile(path, 'w', zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr('archipelago.json', json.dumps(manifest))
+        archive.writestr(PATCH_ENTRY, json.dumps(patch, ensure_ascii=False, indent=1))
+
+
+def _patch_files(path):
+    """(patch text, manifest dict or None) of a .aprmk: a container, or the plain JSON of older versions."""
+    import zipfile
     from pathlib import Path
+    if zipfile.is_zipfile(path):
+        with zipfile.ZipFile(path) as archive:
+            names = archive.namelist()
+            manifest = json.loads(archive.read('archipelago.json')) if 'archipelago.json' in names else None
+            return archive.read(PATCH_ENTRY).decode('utf-8'), manifest
+    return Path(path).read_text(encoding='utf-8'), None
+
+
+def load_patch(path):
     try:
-        patch = json.loads(Path(path).read_text(encoding='utf-8'))
-    except (OSError, ValueError) as error:
+        text, _ = _patch_files(path)
+        patch = json.loads(text)
+    except (OSError, ValueError, KeyError) as error:
         raise ValueError(f'Unreadable Archipelago patch: {error}') from error
     check_patch(patch)
     return patch
+
+
+def patch_server(path):
+    """The server address the website wrote into a downloaded .aprmk (``host:port``), or None."""
+    try:
+        _, manifest = _patch_files(path)
+    except (OSError, ValueError, KeyError):
+        return None
+    server = (manifest or {}).get('server')
+    return server if isinstance(server, str) and server else None
 
 
 MAX_NAME = 512            # item, player and location names of any game

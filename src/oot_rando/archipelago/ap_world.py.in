@@ -181,8 +181,7 @@ class OoTRemakeWorld(World):
         patch = remake.patch(placements, remote, multiworld.seed_name, self.player_name, self.player,
                              CATALOG['game_build'], precollected)
         path = os.path.join(output_directory, multiworld.get_out_file_name_base(self.player) + bridge.PATCH_SUFFIX)
-        with open(path, 'w', encoding='utf-8') as handle:
-            json.dump(patch, handle, ensure_ascii=False, indent=1)
+        bridge.write_patch(patch, path)
 
     def fill_slot_data(self):
         return {'patch_version': bridge.PATCH_VERSION, 'scan': CATALOG['scan'], 'seed_key': self.remake.seed_key}

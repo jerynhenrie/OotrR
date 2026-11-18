@@ -63,6 +63,17 @@ class ServiceTests(unittest.TestCase):
                     validate_mod_directory(invalid)
             self.assertFalse(mods.exists())
 
+    def test_separate_instance_mods_folder_next_to_the_port(self):
+        # mods-<name> beside image.bin: a second instance's mods (HOS_MODS), e.g. mods-rando on Linux.
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory)
+            mods = self.make_hookshot(base / 'Hookshot')
+            rando = mods.parent / 'mods-rando'
+            self.assertEqual(validate_mod_directory(rando), rando.resolve())
+            for invalid in (base / 'mods-rando', mods.parent / 'modsrando', mods.parent / 'romfs-rando'):
+                with self.subTest(path=invalid), self.assertRaises(ValueError):
+                    validate_mod_directory(invalid)
+
     def test_generate_in_mods_writes_the_seed_there_and_archives_the_previous(self):
         with tempfile.TemporaryDirectory() as directory:
             base = Path(directory)

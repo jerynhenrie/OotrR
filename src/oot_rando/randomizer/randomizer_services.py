@@ -125,7 +125,9 @@ def validate_mod_directory(directory):
     if directory.name.upper() == TITLE:
         return directory
     game = directory.parent
-    if directory.name.lower() == 'mods' and is_port_folder(game):
+    name = directory.name.lower()
+    # mods-<name>: a separate instance's mods folder (HOS_MODS), such as mods-rando (docs/LINUX.md)
+    if (name == 'mods' or name.startswith('mods-')) and is_port_folder(game):
         return directory
     raise ValueError('Choose the mods folder of title ' + TITLE
                      + ' (emulator), or the mods folder of a PC port (next to image.bin and romfs:'

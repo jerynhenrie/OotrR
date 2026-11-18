@@ -5,6 +5,7 @@ import queue
 import threading
 import time
 import unittest
+from unittest import mock
 
 from oot_rando.archipelago import client as ap
 from oot_rando.archipelago.bridge import GAME
@@ -225,6 +226,18 @@ class Flow(unittest.TestCase):
         self.socket.push({'cmd': 'RoomInfo', 'games': [GAME]}, connected_packet())
         self.assertTrue(wait(lambda: self.socket.commands('LocationChecks')))
         self.assertEqual(self.socket.commands('LocationChecks')[0]['locations'], [12])
+
+
+class LinuxDeliveryTest(unittest.TestCase):
+    def test_delivery_enabled_on_linux(self):
+        with mock.patch('os.name', 'posix'), mock.patch('sys.platform', 'linux'):
+            client = ap.ArchipelagoClient(MANIFEST, 'localhost:38281')
+        self.assertIsNotNone(client.delivery)
+
+    def test_no_delivery_where_live_reading_is_unsupported(self):
+        with mock.patch('os.name', 'posix'), mock.patch('sys.platform', 'darwin'):
+            client = ap.ArchipelagoClient(MANIFEST, 'localhost:38281')
+        self.assertIsNone(client.delivery)
 
 
 if __name__ == '__main__':

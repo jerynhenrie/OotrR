@@ -1608,7 +1608,7 @@ class Application:
         try:
             manifest, catalogue = read_artifact(self.artifact)
             self.current_checks = catalogue['checks']
-            live = live_memory.LiveGameData() if os.name == 'nt' else None
+            live = live_memory.LiveGameData() if live_memory.supported() else None
             self.tracker = TrackerSession(self.artifact, self.slot.get(), save_path=self.save_path.get(), live=live)
             self.connection_status.set('Reading at the latest save' if self.save_path.get() else 'Choose a progress.sav file to enable automatic tracking.')
             self.render_tracker()

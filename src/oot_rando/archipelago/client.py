@@ -15,6 +15,7 @@ import time
 import uuid
 
 from oot_rando.archipelago.bridge import GAME
+from oot_rando.tracker.live_memory import supported as live_supported
 
 DEFAULT_PORT = 38281
 # Largest packet accepted from the server: data packages of big multiworlds are a few
@@ -141,9 +142,9 @@ class ArchipelagoClient:
         self.slot, self.team, self.players, self.slot_info = None, None, {}, {}
         self.names = {}                 # game → {'item': {id: name}, 'location': {id: name}}
         self.room_seed = None
-        # Items handed to the running game (None: not on this system, or disabled).
+        # Items handed to the running game (None: not on this system, or disabled; see live_memory.supported).
         self.delivery = delivery
-        if self.delivery is None and __import__('os').name == 'nt':
+        if self.delivery is None and live_supported():
             from oot_rando.archipelago.receive import LiveDelivery
             self.delivery = LiveDelivery(manifest)
         self._delivery_thread = None
@@ -434,7 +435,6 @@ class ArchipelagoClient:
 def main(argv=None):
     """``ap-client MOD_FOLDER SERVER [--password P] [--slot NAME] [--save progress.sav]``: headless client."""
     import argparse
-    import os
     from pathlib import Path
     from oot_rando.randomizer.randomizer_services import read_artifact
     from oot_rando.tracker.auto_tracker import TrackerSession, newest_save
@@ -451,7 +451,7 @@ def main(argv=None):
     hookshot = args.hookshot or (args.mod.resolve().parent.parent if args.mod.resolve().parent.name.lower() == 'mods'
                                  else None)
     live = None
-    if os.name == 'nt':
+    if live_supported():
         from oot_rando.tracker.live_memory import LiveGameData
         live = LiveGameData()
     tracker = TrackerSession(args.mod, 'archipelago', save_path=args.save or '', live=live)

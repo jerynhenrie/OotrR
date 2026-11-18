@@ -240,5 +240,24 @@ class LinuxDeliveryTest(unittest.TestCase):
         self.assertIsNone(client.delivery)
 
 
+class HeadlessLaunchTest(unittest.TestCase):
+    def test_user_folder_reaches_game_and_save_search(self):
+        from pathlib import Path
+        mod = Path('/g/Switch2/mods-rando/OoT_Randomizer_1')
+        stop = mock.Mock(log=[], log_count=0)
+        type(stop).fatal = mock.PropertyMock(side_effect=[False, True, True])   # one turn of the loop
+        with mock.patch('oot_rando.randomizer.randomizer_services.read_artifact', return_value=(MANIFEST, None)), \
+                mock.patch('oot_rando.tracker.auto_tracker.TrackerSession'), \
+                mock.patch('oot_rando.tracker.auto_tracker.newest_save', return_value=None) as newest, \
+                mock.patch('oot_rando.tracker.game_launch.launch') as launch, \
+                mock.patch.object(ap, 'ArchipelagoClient', return_value=stop), \
+                mock.patch.object(ap, 'live_supported', return_value=False), \
+                mock.patch.object(ap.time, 'sleep'):
+            ap.main([str(mod), 'localhost:38282', '--hookshot', '/g/Switch2', '--user', '/d/hookshot-rando',
+                     '--launch'])
+        launch.assert_called_once_with(Path('/g/Switch2'), user_dir=Path('/d/hookshot-rando'), mods_dir=mod.parent)
+        self.assertEqual(newest.call_args.kwargs.get('user_dir'), Path('/d/hookshot-rando'))
+
+
 if __name__ == '__main__':
     unittest.main()

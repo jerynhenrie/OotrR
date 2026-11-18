@@ -446,6 +446,9 @@ def main(argv=None):
     parser.add_argument('--slot')
     parser.add_argument('--save', help='progress.sav to follow (default: the most recently written)')
     parser.add_argument('--hookshot', help='Hookshot folder (default: the mod folder\'s parent of mods/)')
+    parser.add_argument('--user', type=Path,
+                        help='Hookshot user folder (saves) of a separate randomizer instance: passed to the game with '
+                             '--launch, and the only place saves are looked for')
     parser.add_argument('--launch', action='store_true',
                         help='start the game (Linux Hookshot) so its memory can be read: docs/LINUX.md')
     args = parser.parse_args(argv)
@@ -457,7 +460,7 @@ def main(argv=None):
         if not hookshot:
             parser.error('--launch needs --hookshot, or a mod folder in <game>/mods')
         try:
-            launch(hookshot)
+            launch(Path(hookshot), user_dir=args.user, mods_dir=args.mod.resolve().parent)
         except (ValueError, OSError) as error:
             parser.error(f'--launch: {error}')
     live = None
@@ -478,7 +481,7 @@ def main(argv=None):
     try:
         while not client.fatal:
             if not args.save:
-                path = newest_save(hookshot, TITLE, args.mod)
+                path = newest_save(hookshot, TITLE, args.mod, user_dir=args.user)
                 tracker.save_path = str(path) if path else ''
             tracker.refresh()
             client.update(tracker.completed, tracker.goal_reached)

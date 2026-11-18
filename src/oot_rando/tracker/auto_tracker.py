@@ -41,11 +41,13 @@ def port_appdata_names(root):
     return names
 
 
-def save_roots(hookshot_root=None, mods=None):
+def save_roots(hookshot_root=None, mods=None, user_dir=None):
     """Save folders of a PC port (``<game>/user/save``, or ``%APPDATA%/<Port>/save`` where Longshot
     moves them on import, renaming the old folder ``save.moved-<date>``; ``$XDG_DATA_HOME/hookshot/save`` on
     Linux), of a portable emulator
     holding ``mods`` (its mods folder or a seed in it), and of Eden in %APPDATA% (NAND user saves)."""
+    if user_dir:   # a game started with --user <user_dir> saves there only: no other instance's saves
+        return [Path(user_dir) / 'save']
     roots = []
     appdata = os.environ.get('APPDATA')
     if hookshot_root:
@@ -70,10 +72,10 @@ def save_roots(hookshot_root=None, mods=None):
     return unique
 
 
-def find_save_slots(hookshot_root=None, title=None, mods=None):
+def find_save_slots(hookshot_root=None, title=None, mods=None, user_dir=None):
     """Every slot_*/progress.sav below the known save folders (any depth)."""
     found = {}
-    for save in save_roots(hookshot_root, mods):
+    for save in save_roots(hookshot_root, mods, user_dir):
         if not save.is_dir():
             continue
         # The emulator NAND holds every game: keep this title's folders only.
@@ -87,10 +89,10 @@ def find_save_slots(hookshot_root=None, title=None, mods=None):
     return sorted(found.values())
 
 
-def newest_save(hookshot_root=None, title=None, mods=None):
+def newest_save(hookshot_root=None, title=None, mods=None, user_dir=None):
     """The progress.sav written most recently across every save and slot."""
     best, best_time = None, None
-    for path in find_save_slots(hookshot_root, title, mods):
+    for path in find_save_slots(hookshot_root, title, mods, user_dir):
         try:
             written = path.stat().st_mtime
         except OSError:

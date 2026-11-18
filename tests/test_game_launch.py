@@ -35,6 +35,16 @@ class GameLaunchTest(unittest.TestCase):
         with mock.patch('os.name', 'posix'), self.assertRaises(ValueError):
             launch_command(self.port)
 
+    def test_launch_command_passes_user_folder(self):
+        with mock.patch('os.name', 'posix'):
+            self.assertEqual(launch_command(self.port, user_dir=self.tmp / 'rando'),
+                             [str(self.port / 'bin' / 'hookshot'), '--user', str(self.tmp / 'rando')])
+
+    def test_launch_env_points_mods_and_backups_at_the_instance(self):
+        env = launch_env({'HOME': '/home/me'}, mods_dir='/g/mods-rando', user_dir='/d/hookshot-rando')
+        self.assertEqual(env, {'HOME': '/home/me', 'HOS_MODS': '/g/mods-rando',
+                               'HOS_SAVE_BACKUPS': str(Path('/d/hookshot-rando') / 'save-backups')})
+
     def test_launch_env_drops_bundle_variables(self):
         env = launch_env({'HOME': '/home/me', 'LD_LIBRARY_PATH': '/tmp/_MEI1', 'PYTHONHOME': '/x',
                           'APPIMAGE': '/a', 'APPDIR': '/b', 'HOOKSHOT_BUILDER_EXE': '/c', 'DISPLAY': ':0'})

@@ -43,6 +43,22 @@ sudo setcap cap_sys_ptrace=ep ~/.local/share/oot-rando-python
 Setting `ptrace_scope` to `0` does the same for every program, and is not
 recommended.
 
+## A randomizer beside the untouched game
+
+One build can run as two games: keep `<game>/mods` empty for the untouched game,
+install seeds into another folder (`ap-install PATCH GAME.nup <game>/mods-rando`)
+and start the client with its own user folder:
+
+```sh
+python -m oot_rando ap-client <game>/mods-rando/OoT_Randomizer_<id> SERVER \
+    --hookshot <game> --user ~/.local/share/hookshot-rando --launch
+```
+
+The game then loads mods from the seed's folder (`HOS_MODS`), keeps its saves in
+`<user>/save` (`--user`) and its save backups in `<user>/save-backups`
+(`HOS_SAVE_BACKUPS`), so neither game ever restores the other's saves. The client
+looks for saves in `<user>/save` only.
+
 ## Tested
 
 Hookshot v2.3.2, Arch Linux (Omarchy), kernel 7.2, `ptrace_scope` 1, 2026-11-17:

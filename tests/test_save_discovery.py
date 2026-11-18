@@ -100,6 +100,33 @@ class LinuxHookshotSaveTests(unittest.TestCase):
             save = Path(temporary) / '.local' / 'share' / 'hookshot' / 'save' / '5a3c' / 'slot_00' / 'progress.sav'
             self.assertEqual(self.find(temporary, {'HOME': temporary}, save), save)
 
+    def test_hookshot_user_folder_saves_found(self):
+        # A game started with --user <folder> keeps its saves in <folder>/save.
+        with tempfile.TemporaryDirectory() as temporary:
+            port = Path(temporary) / 'Switch2'
+            (port / 'mods-rando').mkdir(parents=True)
+            user = Path(temporary) / 'hookshot-rando'
+            save = user / 'save' / '5a3c' / 'slot_01' / 'progress.sav'
+            save.parent.mkdir(parents=True)
+            save.write_bytes(b'x')
+            self.assertEqual(newest_save(port, user_dir=user), save)
+
+    def test_user_folder_ignores_the_other_instances_saves(self):
+        # The untouched game's newer save in ~/.local/share/hookshot must not win over the randomizer's.
+        with tempfile.TemporaryDirectory() as temporary:
+            port = Path(temporary) / 'Switch2'
+            port.mkdir()
+            ours = Path(temporary) / 'hookshot-rando' / 'save' / '5a3c' / 'slot_00' / 'progress.sav'
+            other = Path(temporary) / '.local' / 'share' / 'hookshot' / 'save' / '5a3c' / 'slot_00' / 'progress.sav'
+            for path in (ours, other):
+                path.parent.mkdir(parents=True)
+                path.write_bytes(b'x')
+            now = time.time()
+            os.utime(ours, (now - 60, now - 60))
+            with mock.patch('os.name', 'posix'), mock.patch.dict(os.environ, {'HOME': temporary}):
+                os.environ.pop('XDG_DATA_HOME', None)
+                self.assertEqual(newest_save(port, user_dir=ours.parents[3]), ours)
+
     def test_hookshot_linux_saves_follow_xdg_data_home(self):
         with tempfile.TemporaryDirectory() as temporary:
             xdg = Path(temporary) / 'xdg'

@@ -42,3 +42,16 @@ sudo setcap cap_sys_ptrace=ep ~/.local/share/oot-rando-python
 `CAP_SYS_PTRACE` lets that interpreter read and change any of your processes.
 Setting `ptrace_scope` to `0` does the same for every program, and is not
 recommended.
+
+## Tested
+
+Hookshot v2.3.2, Arch Linux (Omarchy), kernel 7.2, `ptrace_scope` 1, 2026-11-17:
+
+- Started by the client: the snapshot read 11292 GameData bools and the
+  Bool64bitKey table 8 seconds after launch, at the title screen.
+- Started from the builder or as a user service: `LiveUnavailable: cannot read
+  the game (Linux ptrace_scope): start it with ap-client --launch (or Launch game),
+  see docs/LINUX.md`. With both running, the client skips the one it cannot read
+  and attaches to the one it started.
+- Still to check in a multiworld: a check sent before saving, and an item
+  received from the server (`/send`).

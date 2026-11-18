@@ -49,6 +49,7 @@ class LinuxProcessMemory:
         self.fd, self.pid, self.next_scan = None, None, 0.0
         self.image = ''
         self.base, self.slot = host_base, GAMEDATA_SLOT
+        self.last_error = 'game not running'   # repeated between scans, so a hint is not lost
 
     def _mem(self, pid):
         return str(self.proc_root / str(pid) / 'mem')
@@ -60,7 +61,7 @@ class LinuxProcessMemory:
             self.close()
         now = time.monotonic()
         if now < self.next_scan:
-            raise LiveUnavailable('game not running')
+            raise LiveUnavailable(self.last_error)
         self.next_scan = now + 5   # scanning every process each second would be wasteful
         denied = False
         for pid, image in port_pids(self.proc_root):
@@ -75,9 +76,8 @@ class LinuxProcessMemory:
                 self.fd, self.pid, self.image = fd, pid, image
                 return
             os.close(fd)
-        if denied:
-            raise LiveUnavailable(PERMISSION_HINT)
-        raise LiveUnavailable('game not running')
+        self.last_error = PERMISSION_HINT if denied else 'game not running'
+        raise LiveUnavailable(self.last_error)
 
     def _probe(self, fd):
         """The game's guest window is mapped (a process still starting has none yet)."""

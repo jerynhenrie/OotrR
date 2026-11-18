@@ -78,6 +78,14 @@ class LinuxMemoryTest(unittest.TestCase):
             with self.assertRaisesRegex(LiveUnavailable, r'--launch.*LINUX\.md'):
                 self.memory().attach()
 
+    def test_permission_hint_kept_between_scans(self):
+        # The delivery loop polls every second; scans are 5 s apart: the hint must not turn into 'game not running'.
+        memory = self.memory()
+        with mock.patch('os.open', side_effect=PermissionError(13, 'Permission denied')):
+            for _ in range(3):
+                with self.assertRaisesRegex(LiveUnavailable, r'--launch.*LINUX\.md'):
+                    memory.attach()
+
 
 class FactoryTest(unittest.TestCase):
     def test_factory_picks_platform_class(self):

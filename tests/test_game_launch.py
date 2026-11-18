@@ -41,6 +41,18 @@ class GameLaunchTest(unittest.TestCase):
         self.assertEqual(env, {'HOME': '/home/me', 'DISPLAY': ':0'})
 
 
+class GuiLaunchGameTest(unittest.TestCase):
+    def test_second_click_while_game_runs_does_not_start_another(self):
+        from oot_rando.gui import randomizer_gui
+        app = mock.Mock(spec=['hookshot_root', 'game_process'])
+        app.hookshot_root.return_value = Path('/games/Switch2')
+        app.game_process = mock.Mock(**{'poll.return_value': None})   # still running
+        with mock.patch('oot_rando.tracker.game_launch.launch') as launch, \
+                mock.patch.object(randomizer_gui.messagebox, 'showinfo'):
+            randomizer_gui.Application.launch_game(app)
+        launch.assert_not_called()
+
+
 class GuiLaunchButtonTest(unittest.TestCase):
     def test_gui_has_what_the_launch_button_needs(self):
         from oot_rando.gui import randomizer_gui

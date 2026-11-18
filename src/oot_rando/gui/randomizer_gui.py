@@ -930,6 +930,10 @@ class Application:
         if folder is None:
             messagebox.showerror('Launch game', 'Choose the mods folder of your Hookshot game (<game>/mods) first.')
             return
+        running = getattr(self, 'game_process', None)
+        if running is not None and running.poll() is None:   # a second game would leave the client reading either one
+            messagebox.showinfo('Launch game', 'The game is already running.')
+            return
         try:
             self.game_process = launch(folder)
         except (ValueError, OSError) as error:

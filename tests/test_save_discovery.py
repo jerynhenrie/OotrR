@@ -5,6 +5,7 @@ import tempfile
 import time
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 from oot_rando.tracker.auto_tracker import find_save_slots, newest_save
@@ -79,6 +80,31 @@ class SaveDiscoveryTests(unittest.TestCase):
             stray.parent.mkdir(parents=True)
             stray.write_bytes(b'x')
             self.assertNotIn(stray, find_save_slots(root))
+
+
+class LinuxHookshotSaveTests(unittest.TestCase):
+    """Native Linux Hookshot keeps its saves in $XDG_DATA_HOME/hookshot/save, not <game>/user/save."""
+    def find(self, temporary, environ, save):
+        port = Path(temporary) / 'Switch2'
+        (port / 'mods').mkdir(parents=True)
+        save.parent.mkdir(parents=True)
+        save.write_bytes(b'x')
+        with mock.patch('os.name', 'posix'), mock.patch.dict(os.environ, environ):
+            os.environ.pop('APPDATA', None)
+            if 'XDG_DATA_HOME' not in environ:
+                os.environ.pop('XDG_DATA_HOME', None)
+            return newest_save(port / 'mods')
+
+    def test_hookshot_linux_saves_found(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            save = Path(temporary) / '.local' / 'share' / 'hookshot' / 'save' / '5a3c' / 'slot_00' / 'progress.sav'
+            self.assertEqual(self.find(temporary, {'HOME': temporary}, save), save)
+
+    def test_hookshot_linux_saves_follow_xdg_data_home(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            xdg = Path(temporary) / 'xdg'
+            save = xdg / 'hookshot' / 'save' / '5a3c' / 'slot_02' / 'progress.sav'
+            self.assertEqual(self.find(temporary, {'HOME': temporary, 'XDG_DATA_HOME': str(xdg)}, save), save)
 
 
 if __name__ == '__main__':

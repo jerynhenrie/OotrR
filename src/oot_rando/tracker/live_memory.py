@@ -1,4 +1,5 @@
-"""Real-time GameData bools from a running game: Hookshot, or a yuzu-family emulator (Windows).
+"""Real-time GameData bools from a running game: Hookshot, or a yuzu-family emulator (Windows);
+native Hookshot on Linux through ``linux_memory``.
 
 Layout, as Hookshot v2.1.0's own cheat menu reads it (tools/host/hos_main.c, oot_gamedata_set_bool):
 - guest memory is one window at the fixed host address A64_HOST_BASE = 0x100000000000
@@ -30,7 +31,9 @@ client's reception signal, ``patching.ap_mailbox``): one value byte, as the chea
 import bisect
 import ctypes
 import hashlib
+import os
 import struct
+import sys
 import time
 from pathlib import Path
 
@@ -89,6 +92,21 @@ GUEST_CODE = range(0x80000000, 0x84000000, 0x1000)   # where emulators load the 
 
 class LiveUnavailable(Exception):
     pass
+
+
+def supported():
+    """True where the running game can be read: Windows, and Linux (native Hookshot only)."""
+    return os.name == 'nt' or sys.platform.startswith('linux')
+
+
+def make_process_memory():
+    """The process memory backend of this system (docs/LINUX.md for Linux)."""
+    if os.name == 'nt':
+        return ProcessMemory()
+    if sys.platform.startswith('linux'):
+        from oot_rando.tracker.linux_memory import LinuxProcessMemory
+        return LinuxProcessMemory()
+    raise LiveUnavailable('live reading not supported on this system')
 
 
 def parse_bools(table, entries, count):
@@ -298,7 +316,7 @@ class ProcessMemory:
 class LiveGameData:
     """snapshot() -> {'bool': {hash: bool}, 'sha256': ...} or raises LiveUnavailable."""
     def __init__(self, memory=None):
-        self.memory = memory or ProcessMemory()
+        self.memory = memory or make_process_memory()
 
     def u64(self, guest):
         return struct.unpack('<Q', self.memory.read(guest, 8))[0]
@@ -401,7 +419,7 @@ def event_playing_from(holder, manager, word):
 class LiveEventState:
     """``playing()`` -> bool, or raises LiveUnavailable. Reads 24 bytes, never writes."""
     def __init__(self, memory=None):
-        self.memory = memory or ProcessMemory()
+        self.memory = memory or make_process_memory()
 
     def u64(self, guest):
         return struct.unpack('<Q', self.memory.read(guest, 8))[0]

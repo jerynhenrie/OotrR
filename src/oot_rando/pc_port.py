@@ -5,10 +5,16 @@ mods in ``<game>/mods`` and the options in ``<game>/<name>_options.ini``. Longsh
 builds (one folder per version, ``Games/Longshot/<version>``) keep the exe in ``<game>/bin/``. Nothing here depends on
 the exe's name: a folder holding ``image.bin`` and ``romfs`` is a port, and a running process is
 the port when its exe sits in such a folder (or carries one of the known names).
+
+Native Linux builds keep the game in ``<game>/bin/hookshot`` (an ELF file, no suffix); ``<game>/hookshot``
+beside it is a shell launcher that opens the builder, not the game.
 """
+import os
 from pathlib import Path
 
 KNOWN_EXES = ('hookshot.exe', 'longshot.exe')
+KNOWN_POSIX_EXES = ('hookshot', 'longshot')
+ELF_MAGIC = b'\x7fELF'
 DEFAULT_OPTIONS = 'hookshot_options.ini'
 
 
@@ -41,7 +47,21 @@ def port_exe(folder):
             continue
         if exes:
             return exes[0]
+    if os.name != 'nt':
+        for place in places:
+            for name in KNOWN_POSIX_EXES:
+                if is_elf(place / name):
+                    return place / name
     return None
+
+
+def is_elf(path):
+    """True when ``path`` is a file starting with the ELF magic (a Linux binary, not a script)."""
+    try:
+        with open(path, 'rb') as file:
+            return file.read(4) == ELF_MAGIC
+    except OSError:
+        return False
 
 
 def game_folder(image_path):
@@ -60,6 +80,8 @@ def is_port_process(image_path):
     if not image_path:
         return False
     path = Path(image_path)
+    if path.suffix == '' and path.name.lower() in KNOWN_POSIX_EXES:
+        return game_folder(path) is not None and is_elf(path)
     if path.suffix.lower() != '.exe':
         return False
     if path.name.lower() in KNOWN_EXES:

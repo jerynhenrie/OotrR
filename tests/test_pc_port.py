@@ -2,6 +2,7 @@ import _src_path  # noqa: F401  (src on sys.path)
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 from oot_rando.pc_port import game_folder, is_port_folder, is_port_process, options_ini, port_exe
 
@@ -58,6 +59,35 @@ class PcPortTest(unittest.TestCase):
             (root / 'longshot_options.ini').touch()
             self.assertEqual(options_ini(root), root / 'longshot_options.ini')
             self.assertIsNone(game_folder(str(Path(directory) / 'bin' / 'other.exe')))
+
+
+class LinuxPortTest(unittest.TestCase):
+    """Native Linux Hookshot: the game is <game>/bin/hookshot (ELF); <game>/hookshot is a shell launcher."""
+    def setUp(self):
+        self.directory = tempfile.TemporaryDirectory()
+        self.port = Path(self.directory.name) / 'Switch2'
+        (self.port / 'bin').mkdir(parents=True)
+        (self.port / 'romfs').mkdir()
+        (self.port / 'image.bin').touch()
+        (self.port / 'bin' / 'hookshot').write_bytes(b'\x7fELF\x02\x01\x01')
+        (self.port / 'hookshot').write_bytes(b'#!/bin/sh\nexec ./bin/hookshot\n')
+
+    def tearDown(self):
+        self.directory.cleanup()
+
+    def test_linux_game_binary_is_port_process(self):
+        self.assertTrue(is_port_process(str(self.port / 'bin' / 'hookshot')))
+
+    def test_launcher_script_is_not_the_game(self):
+        self.assertFalse(is_port_process(str(self.port / 'hookshot')))
+
+    def test_unrelated_posix_binary_is_not_port(self):
+        self.assertFalse(is_port_process('/usr/bin/hookshot'))
+        self.assertFalse(is_port_process('hookshot'))
+
+    def test_port_exe_finds_linux_binary(self):
+        with mock.patch('os.name', 'posix'):
+            self.assertEqual(port_exe(self.port), self.port / 'bin' / 'hookshot')
 
 
 if __name__ == '__main__':
